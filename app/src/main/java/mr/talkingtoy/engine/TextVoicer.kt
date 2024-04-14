@@ -11,13 +11,12 @@ object TextVoicer {
     private var tts: TextToSpeech? = null
 
     fun voiceText(context: Context, callback: ()-> Unit, phrase: String) {
-        if (tts == null) {
+
             tts = createTTSInstance(context, callback) { tts ->
                 tts?.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "11")
             }
-        } else {
             tts?.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "11")
-        }
+
     }
 
 
@@ -29,6 +28,7 @@ object TextVoicer {
         var tts: TextToSpeech? = null
         tts = TextToSpeech(context) { status ->
             if (status == TextToSpeech.SUCCESS) {
+                Log.d("TEST5", "SUCCESS")
                 tts?.language = Locale("ru", "RU")
                 val voice = Voice(
                     "ru-ru-x-ruf-network",
@@ -45,6 +45,7 @@ object TextVoicer {
                     }
 
                     override fun onDone(utteranceId: String) {
+                        Log.d("TEST5", " callback.invoke()")
                         callback.invoke()
                     }
 
