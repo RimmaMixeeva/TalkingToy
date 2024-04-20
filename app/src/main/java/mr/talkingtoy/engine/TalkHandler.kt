@@ -66,6 +66,7 @@ object TalkHandler {
         if (phrase == null) {
             phrase = "Я ещё маленький и не всё понимаю, мне надо время, чтобы обдумать твой ответ. Давай пока закончим разговор."
             stopDialogue.invoke()
+            currentLevel = 1
         }
         return phrase
     }
