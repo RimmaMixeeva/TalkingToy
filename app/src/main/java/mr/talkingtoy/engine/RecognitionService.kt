@@ -43,11 +43,9 @@ class RecognitionService : Service() {
             TextVoicer.voiceText(context, {
                 mp3Service?.initPlayer(R.raw.teremok)
                 mp3Service?.startPlay()
-                Log.d("TEST5", "story ON")
             }, "Режим сказки")
         },
         RecognitionItem(CASE.REPEAT, KeyWords.REPEAT_KEYWORDS) {
-            Log.d("MODE ON", "REPEATING INVOKED")
             TextVoicer.voiceText(context, {
                 FeatureHandler.repeatFeatureIsOn = true
             }, "Режим повторяшки")
@@ -55,13 +53,21 @@ class RecognitionService : Service() {
         RecognitionItem(CASE.SONG, KeyWords.MUSIC_KEYWORDS) {
             FeatureHandler.mp3FeatureIsOn = true
             TextVoicer.voiceText(context, {
-                Log.d("TEST5", "888888888888888888888888888888888889")
                 mp3Service?.initPlayer(R.raw.song)
-                mp3Service?.startPlay()}, "Режим песни")
+                mp3Service?.startPlay()
+            }, "Режим песни")
         },
-        RecognitionItem(CASE.TALK, KeyWords.TALK_KEYWORDS) { Log.d("TEST5", "TALK ON") },
+        RecognitionItem(CASE.TALK, KeyWords.TALK_KEYWORDS) {
+            TextVoicer.voiceText(
+                context,
+                {
+                    FeatureHandler.talkFeatureIsOn = true
+                    TextVoicer.voiceText(context, {}, TalkHandler.processAnswer("", {FeatureHandler.talkFeatureIsOn = false}))
+                },
+                "Режим разговора"
+            )
+        },
         RecognitionItem(CASE.STOP, KeyWords.STOP_KEYWORDS) {
-            Log.d("TEST5", "STOP RECOGNIZED")
             if (mp3Service?.isOn() == true) mp3Service?.stopPlay()
             FeatureHandler.stop()
         }
@@ -124,29 +130,33 @@ class RecognitionService : Service() {
 
             override fun onResults(results: Bundle?) {
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
-                Log.d("TEST5", "RESULTS")
                 matches?.let {
                     // Полученные результаты
                     val recognizedText = it[0]
-                    Log.d("RECOGNIZED TEXT", recognizedText)
                     if (FeatureHandler.repeatFeatureIsOn && !executeStop(recognizedText)) {
                         speechRecognizer.stopListening()
                         if (!isRepeatingPhrase && recognizedText.trim() != "режим повторяшки") {
-                            Log.d("TEST5", "0")
                             isRepeatingPhrase = true
                             TextVoicer.voiceText(context, {
-                                 isRepeatingPhrase = false
+                                isRepeatingPhrase = false
                                 MainScope().launch {
                                     speechRecognizer.startListening(recognitionIntent)
                                 }
                             }, recognizedText)
                         } else {
-                            Log.d("TEST5", "3")
                             speechRecognizer.startListening(recognitionIntent)
                         }
 
+                    } else if (FeatureHandler.talkFeatureIsOn) {
+                        speechRecognizer.stopListening()
+                        TextVoicer.voiceText(context, {
+                            MainScope().launch {
+                                speechRecognizer.startListening(recognitionIntent)
+                            }
+                        }, TalkHandler.processAnswer(recognizedText.trim()) {
+                            FeatureHandler.talkFeatureIsOn = false
+                        })
                     } else {
-                        Log.d("TEST5", "9")
                         for (recognitionItem in itemsList) {
                             var isMatch = false
                             for (item in recognitionItem.codeWords) {
@@ -154,7 +164,6 @@ class RecognitionService : Service() {
                                 isMatch = isMatch || regex.containsMatchIn(recognizedText)
                             }
                             if (isMatch) {
-                                Log.d("MODE ON", recognitionItem.name.toString() + "MODE")
                                 recognitionItem.functionality.invoke()
                             }
                         }
@@ -164,11 +173,9 @@ class RecognitionService : Service() {
             }
 
             override fun onPartialResults(partialResults: Bundle?) {
-                Log.d("TEST5", "onPartialResults")
                 val matches =
                     partialResults?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION) as ArrayList<String>
                 var last = matches[0].split(" ").last()
-                Log.d("TEST5", last)
                 executeStop(last)
 
             }
@@ -193,7 +200,6 @@ class RecognitionService : Service() {
 
     private val mp3ServiceConnection = object : ServiceConnection {
         override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-            Log.d("TEST5", "CONNECT")
             // Метод вызывается, когда связь с сервисом установлена
             mp3Service = (binder as MP3Service.MyBinder).getService()
             mp3ServiceIsBounded = true;
@@ -217,7 +223,7 @@ class RecognitionService : Service() {
         }
     }
 
-    private fun executeStop(str: String): Boolean{
+    private fun executeStop(str: String): Boolean {
         var isMatch = false
         for (item in KeyWords.STOP_KEYWORDS) {
             val regex = Regex(item, RegexOption.IGNORE_CASE)

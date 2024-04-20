@@ -18,23 +18,19 @@ class MP3Service: Service() {
     }
 
     fun initPlayer(mp3: Int) {
-        Log.d("Media Player","MediaPlayer init" )
         if(mPlayer == null) {
         mPlayer = MediaPlayer.create(this, mp3)
         }
     }
 
     fun startPlay(){
-        Log.d("Media Player","MediaPlayer start" )
         mPlayer?.start()
     }
     fun stopPlay(){
-        Log.d("Media Player","MediaPlayer stop" )
         mPlayer?.release()
         mPlayer = null
     }
     fun pausePlay(){
-        Log.d("Media Player","MediaPlayer pause" )
         mPlayer?.pause()
     }
     inner class MyBinder : Binder() {
