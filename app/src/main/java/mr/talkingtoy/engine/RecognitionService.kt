@@ -16,8 +16,8 @@ import android.speech.SpeechRecognizer
 import android.util.Log
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
-import mr.talkingtoy.KeyWords
 import mr.talkingtoy.R
+import kotlin.random.Random
 
 
 class RecognitionService : Service() {
@@ -27,6 +27,7 @@ class RecognitionService : Service() {
     private var mp3ServiceIsBounded: Boolean = false
     private var isRepeatingPhrase = false
     private val context = this
+    private var applicationContext: Context? = null
     private var recognitionIntent: Intent? = null
 
     private enum class CASE { STORY, REPEAT, SONG, TALK, STOP }
@@ -41,7 +42,17 @@ class RecognitionService : Service() {
         RecognitionItem(CASE.STORY, KeyWords.STORY_KEYWORDS) {
             FeatureHandler.mp3FeatureIsOn = true
             TextVoicer.voiceText(context, {
-                mp3Service?.initPlayer(R.raw.teremok)
+                var resource = SettingsManager.getString(SettingsManager.TALE, "null", applicationContext!!)
+                if (resource == "Рандом"){
+                    val tales = ResInfo.getTalesChoice().map { item -> item.key }.toList().filter { key -> key != "Рандом" }
+                    val randomNumber = Random.nextInt(tales.size)
+                    resource = tales[randomNumber]
+                } else if (resource == "null"){
+                    val tales = ResInfo.getTalesChoice().map { item -> item.key }.toList().filter { key -> key != "Рандом" }
+                    resource = tales[0]
+                }
+
+                mp3Service?.initPlayer(ResInfo.getTalesChoice()[resource]!!)
                 mp3Service?.startPlay()
             }, "Режим сказки")
         },
@@ -53,7 +64,17 @@ class RecognitionService : Service() {
         RecognitionItem(CASE.SONG, KeyWords.MUSIC_KEYWORDS) {
             FeatureHandler.mp3FeatureIsOn = true
             TextVoicer.voiceText(context, {
-                mp3Service?.initPlayer(R.raw.song)
+                var resource = SettingsManager.getString(SettingsManager.SONG, "null", applicationContext!!)
+                if (resource == "Рандом"){
+                    val songs = ResInfo.getSongsChoice().map { item -> item.key }.toList().filter { key -> key != "Рандом" }
+                    val randomNumber = Random.nextInt(songs.size)
+                    resource = songs[randomNumber]
+                } else if (resource == "null"){
+                    val songs = ResInfo.getSongsChoice().map { item -> item.key }.toList().filter { key -> key != "Рандом" }
+                    resource = songs[0]
+                }
+
+                mp3Service?.initPlayer(ResInfo.getSongsChoice()[resource]!!)
                 mp3Service?.startPlay()
             }, "Режим песни")
         },
@@ -79,6 +100,7 @@ class RecognitionService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        applicationContext = this.getApplicationContext()
         recognitionIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         recognitionIntent?.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
         recognitionIntent?.putExtra(
