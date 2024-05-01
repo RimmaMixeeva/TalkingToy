@@ -14,9 +14,12 @@ import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import android.util.Log
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
 import mr.talkingtoy.R
+import mr.talkingtoy.ai.ChatData
 import kotlin.random.Random
 
 
@@ -40,6 +43,7 @@ class RecognitionService : Service() {
 
     private var itemsList: ArrayList<RecognitionItem> = arrayListOf(
         RecognitionItem(CASE.STORY, KeyWords.STORY_KEYWORDS) {
+            FeatureHandler.stop()
             FeatureHandler.mp3FeatureIsOn = true
             TextVoicer.voiceText(context, {
                 var resource = SettingsManager.getString(SettingsManager.TALE, "null", applicationContext!!)
@@ -54,14 +58,10 @@ class RecognitionService : Service() {
 
                 mp3Service?.initPlayer(ResInfo.getTalesChoice()[resource]!!)
                 mp3Service?.startPlay()
-            }, "Режим сказки")
-        },
-        RecognitionItem(CASE.REPEAT, KeyWords.REPEAT_KEYWORDS) {
-            TextVoicer.voiceText(context, {
-                FeatureHandler.repeatFeatureIsOn = true
-            }, "Режим повторяшки")
+            }, "Я знаю много разных. Приготовься слушать")
         },
         RecognitionItem(CASE.SONG, KeyWords.MUSIC_KEYWORDS) {
+            FeatureHandler.stop()
             FeatureHandler.mp3FeatureIsOn = true
             TextVoicer.voiceText(context, {
                 var resource = SettingsManager.getString(SettingsManager.SONG, "null", applicationContext!!)
@@ -76,16 +76,27 @@ class RecognitionService : Service() {
 
                 mp3Service?.initPlayer(ResInfo.getSongsChoice()[resource]!!)
                 mp3Service?.startPlay()
-            }, "Режим песни")
+            }, "Сейчас спою.")
+        },
+        RecognitionItem(CASE.REPEAT, KeyWords.REPEAT_KEYWORDS) {
+            FeatureHandler.stop()
+            TextVoicer.voiceText(context, {
+                FeatureHandler.repeatFeatureIsOn = true
+            }, "Повторить? Ну давай, внимательно тебя слушаю.")
         },
         RecognitionItem(CASE.TALK, KeyWords.TALK_KEYWORDS) {
-            TextVoicer.voiceText(
+            FeatureHandler.stop()
+            speechRecognizer.stopListening()
+            TextVoicer.voiceText (
                 context,
                 {
                     FeatureHandler.talkFeatureIsOn = true
-                    TextVoicer.voiceText(context, {}, TalkHandler.processAnswer("", {FeatureHandler.talkFeatureIsOn = false}))
+                    MainScope().launch {
+                        Log.d("TEST5", "START LISTENING4")
+                    speechRecognizer.startListening(recognitionIntent)
+                    }
                 },
-                "Режим разговора"
+                "Давай поболтаем"
             )
         },
         RecognitionItem(CASE.STOP, KeyWords.STOP_KEYWORDS) {
@@ -101,6 +112,7 @@ class RecognitionService : Service() {
     override fun onCreate() {
         super.onCreate()
         applicationContext = this.getApplicationContext()
+
         recognitionIntent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH)
         recognitionIntent?.putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true);
         recognitionIntent?.putExtra(
@@ -130,31 +142,41 @@ class RecognitionService : Service() {
             }
 
             override fun onError(p0: Int) {
+                if (FeatureHandler.listen){
+                    Log.d("TEST5", "START LISTENING6")
+                    speechRecognizer.startListening(recognitionIntent)
+                }
                 val errorMessage: String = when (p0) {
                     SpeechRecognizer.ERROR_AUDIO -> "Ошибка аудио"
-                    SpeechRecognizer.ERROR_CLIENT -> "Ошибка клиента"
+                    SpeechRecognizer.ERROR_CLIENT -> {
+                        "Ошибка клиента"}
                     SpeechRecognizer.ERROR_INSUFFICIENT_PERMISSIONS -> "Недостаточно разрешений"
                     SpeechRecognizer.ERROR_NETWORK -> "Ошибка сети"
                     SpeechRecognizer.ERROR_NETWORK_TIMEOUT -> "Тайм-аут сети"
                     SpeechRecognizer.ERROR_NO_MATCH -> {
-                        speechRecognizer.startListening(recognitionIntent)
+
                         "Нет совпадений"
                     }
-
-                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY -> "Распознаватель занят"
+                    SpeechRecognizer.ERROR_RECOGNIZER_BUSY ->  {
+                        "Распознаватель занят"
+                    }
 
                     SpeechRecognizer.ERROR_SERVER -> "Ошибка сервера"
-                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> "Тайм-аут речи"
+                    SpeechRecognizer.ERROR_SPEECH_TIMEOUT -> {
+                        "Тайм-аут речи"
+                    }
                     else -> "Неизвестная ошибка: $p0"
                 }
                 Log.e("SpeechRecognition", "Ошибка распознавания речи: $errorMessage")
             }
 
             override fun onResults(results: Bundle?) {
+
                 val matches = results?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 matches?.let {
                     // Полученные результаты
                     val recognizedText = it[0]
+                    Log.d("TEST5", recognizedText.trim())
                     if (FeatureHandler.repeatFeatureIsOn && !executeStop(recognizedText)) {
                         speechRecognizer.stopListening()
                         if (!isRepeatingPhrase && recognizedText.trim() != "режим повторяшки") {
@@ -170,14 +192,21 @@ class RecognitionService : Service() {
                         }
 
                     } else if (FeatureHandler.talkFeatureIsOn) {
-                        speechRecognizer.stopListening()
-                        TextVoicer.voiceText(context, {
-                            MainScope().launch {
-                                speechRecognizer.startListening(recognitionIntent)
-                            }
-                        }, TalkHandler.processAnswer(recognizedText.trim()) {
-                            FeatureHandler.talkFeatureIsOn = false
-                        })
+
+                        if (recognizedText.trim()!="" && recognizedText.trim()!= "Давай поболтаем"){
+                            speechRecognizer.stopListening()
+                            FeatureHandler.listen = false
+                        CoroutineScope(Dispatchers.Default).launch {
+                            TextVoicer.voiceText(context, {
+                                MainScope().launch {
+                                    speechRecognizer.startListening(recognitionIntent)
+                                    FeatureHandler.listen = true
+                                }
+                            },
+                                removeFirstSentence(ChatData.getResponse(recognizedText.trim().replace("*","")+" - этот вопрос задал тебе ребенок в ходе диалога. Уложись в 4 предложения.  И отвечай на вопрос так, словно общаешься с ребенком, находясь внутри плюшевой овечки Бетти. ")))
+                        }
+                        }
+
                     } else {
                         for (recognitionItem in itemsList) {
                             var isMatch = false
@@ -258,6 +287,11 @@ class RecognitionService : Service() {
             FeatureHandler.stop()
         }
         return isMatch
+    }
+
+    fun removeFirstSentence(input: String): String {
+        val regex = "^\\s*[^.!?]+[.!?]".toRegex()
+        return regex.replace(input, "").trim()
     }
 }
 

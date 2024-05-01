@@ -10,13 +10,12 @@ import java.util.Locale
 object TextVoicer {
     private var tts: TextToSpeech? = null
 
-    fun voiceText(context: Context, callback: ()-> Unit, phrase: String) {
+    fun voiceText(context: Context, callback: () -> Unit, phrase: String) {
 
-            tts = createTTSInstance(context, callback) { tts ->
-                tts?.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "11")
-            }
+        tts = createTTSInstance(context, callback) { tts ->
             tts?.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "11")
-
+        }
+        tts?.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "11")
     }
 
 
@@ -31,7 +30,7 @@ object TextVoicer {
                 Log.d("TEST5", "SUCCESS")
                 tts?.language = Locale("ru", "RU")
                 val voice = Voice(
-                    "ru-ru-x-ruf-network",
+                    "ru-ru-x-ruc-network",
                     Locale("ru", "RU"),
                     400,
                     200,
@@ -54,6 +53,9 @@ object TextVoicer {
                     }
                 })
                 onInstantiateCallback.invoke(tts)
+                TextVoicer.tts?.voices?.forEach { voice ->
+//                    Log.d("VOICES", voice.name)
+                }
             } else {
                 Log.d("TEST5", "TTS ERROR")
             }

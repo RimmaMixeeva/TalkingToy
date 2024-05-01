@@ -8,7 +8,7 @@ import android.os.IBinder
 import android.util.Log
 
 
-class MP3Service: Service() {
+class MP3Service: Service(), MediaPlayer.OnCompletionListener {
 
     var mPlayer: MediaPlayer? = null
     private val binder = MyBinder()
@@ -17,6 +17,9 @@ class MP3Service: Service() {
       return binder
     }
 
+    override fun onCompletion(mp: MediaPlayer) {
+        FeatureHandler.talkFeatureIsOn = true
+    }
     fun initPlayer(mp3: Int) {
         if(mPlayer == null) {
         mPlayer = MediaPlayer.create(this, mp3)
