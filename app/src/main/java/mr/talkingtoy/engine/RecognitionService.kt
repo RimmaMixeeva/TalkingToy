@@ -176,10 +176,9 @@ class RecognitionService : Service() {
                 matches?.let {
                     // Полученные результаты
                     val recognizedText = it[0]
-                    Log.d("TEST5", recognizedText.trim())
                     if (FeatureHandler.repeatFeatureIsOn && !executeStop(recognizedText)) {
                         speechRecognizer.stopListening()
-                        if (!isRepeatingPhrase && recognizedText.trim() != "режим повторяшки") {
+                        if (!isRepeatingPhrase && recognizedText.trim() != "Повторить? Ну давай, внимательно тебя слушаю.") {
                             isRepeatingPhrase = true
                             TextVoicer.voiceText(context, {
                                 isRepeatingPhrase = false
@@ -190,9 +189,7 @@ class RecognitionService : Service() {
                         } else {
                             speechRecognizer.startListening(recognitionIntent)
                         }
-
                     } else if (FeatureHandler.talkFeatureIsOn) {
-
                         if (recognizedText.trim()!="" && recognizedText.trim()!= "Давай поболтаем"){
                             speechRecognizer.stopListening()
                             FeatureHandler.listen = false
@@ -204,9 +201,7 @@ class RecognitionService : Service() {
                                 }
                             },
                                 removeFirstSentence(ChatData.getResponse(recognizedText.trim().replace("*","")+" - этот вопрос задал тебе ребенок в ходе диалога. Уложись в 4 предложения.  И отвечай на вопрос так, словно общаешься с ребенком, находясь внутри плюшевой овечки Бетти. ")))
-                        }
-                        }
-
+                        }}
                     } else {
                         for (recognitionItem in itemsList) {
                             var isMatch = false

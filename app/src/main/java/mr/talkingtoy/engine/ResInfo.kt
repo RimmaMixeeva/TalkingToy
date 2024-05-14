@@ -30,6 +30,4 @@ object ResInfo {
       map["Рандом"] =  -1
       return map
    }
-
-
 }

@@ -18,7 +18,6 @@ object TextVoicer {
         tts?.speak(phrase, TextToSpeech.QUEUE_FLUSH, null, "11")
     }
 
-
     fun createTTSInstance(
         context: Context,
         callback: ()-> Unit,

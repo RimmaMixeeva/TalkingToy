@@ -16,7 +16,6 @@ class MP3Service: Service(), MediaPlayer.OnCompletionListener {
     override fun onBind(p0: Intent?): IBinder? {
       return binder
     }
-
     override fun onCompletion(mp: MediaPlayer) {
         FeatureHandler.talkFeatureIsOn = true
     }
@@ -33,9 +32,6 @@ class MP3Service: Service(), MediaPlayer.OnCompletionListener {
         mPlayer?.release()
         mPlayer = null
     }
-    fun pausePlay(){
-        mPlayer?.pause()
-    }
     inner class MyBinder : Binder() {
         fun getService(): MP3Service {
             return this@MP3Service
@@ -44,5 +40,4 @@ class MP3Service: Service(), MediaPlayer.OnCompletionListener {
     fun isOn(): Boolean {
         return (mPlayer!=null)
     }
-
 }

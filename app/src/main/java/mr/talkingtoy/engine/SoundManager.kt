@@ -23,7 +23,6 @@ class SoundManager (private val context: Activity) {
             0,
             AudioManager.FLAG_REMOVE_SOUND_AND_VIBRATE
         )
-
     }
 
     fun unmute(permission: String){
@@ -34,9 +33,7 @@ class SoundManager (private val context: Activity) {
                 AudioManager.FLAG_ALLOW_RINGER_MODES
             )
     }
-
     fun soundIsOn(): Boolean{
         return audioManager.getStreamVolume(AudioManager.STREAM_NOTIFICATION) != 0
     }
-
 }

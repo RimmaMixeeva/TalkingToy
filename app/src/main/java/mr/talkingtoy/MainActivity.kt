@@ -4,6 +4,7 @@ import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.ServiceConnection
+import android.content.pm.PackageManager
 import android.os.Bundle
 import android.os.IBinder
 import androidx.activity.ComponentActivity
@@ -34,6 +35,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat
+import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -45,6 +48,9 @@ import mr.talkingtoy.engine.SettingsManager
 import mr.talkingtoy.engine.SoundManager
 import mr.talkingtoy.engine.Spinner
 import mr.talkingtoy.engine.TextVoicer
+import java.security.Permission
+import android.Manifest
+import androidx.compose.ui.text.style.TextAlign
 
 
 class MainActivity : ComponentActivity() {
@@ -53,6 +59,7 @@ class MainActivity : ComponentActivity() {
     private var recognitionServiceIsBounded: Boolean = false
     private var soundManager: SoundManager? = null
     var context: Context? = null
+    var startPhrase: String? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         context = this.applicationContext
@@ -70,13 +77,28 @@ class MainActivity : ComponentActivity() {
         } else {
             "С возвращением, $name. Рада тебя видеть."
         }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+            != PackageManager.PERMISSION_GRANTED
+        ) {
+            // Если разрешение не предоставлено, запрашиваем его
+            ActivityCompat.requestPermissions(
+                this,
+                arrayOf(Manifest.permission.RECORD_AUDIO),
+                111
+            )
+        } else {
+            TextVoicer.voiceText(this, {
+                val intent = Intent(this, RecognitionService::class.java)
+                bindService(intent, recognitionServiceConnection, BIND_AUTO_CREATE)
+            }, startPhrase)
+        }
 
-        TextVoicer.voiceText(this, {
-            val intent = Intent(this, RecognitionService::class.java)
-            bindService(intent, recognitionServiceConnection, BIND_AUTO_CREATE)
-        }, startPhrase)
+
+
 
         setContent {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                == PackageManager.PERMISSION_GRANTED){
             var soundIsOn by remember {
                 mutableStateOf(soundManager?.soundIsOn())
             }
@@ -179,7 +201,14 @@ class MainActivity : ComponentActivity() {
                     }
                 }
             }
+            } else {
+                Column(modifier = Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+                    Text("В настройках разрешите доступ к микрофону и перезапустите приложение", textAlign = TextAlign.Center, fontSize = 20.sp)
+                }
+
+            }
         }
+
     }
 
     private val recognitionServiceConnection = object : ServiceConnection {
@@ -199,30 +228,33 @@ class MainActivity : ComponentActivity() {
         soundManager?.unmute(NOTIFICATION_SERVICE)
         unbindService(recognitionServiceConnection)
     }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (startPhrase!=null){
+        when (requestCode) {
+            111 -> {
+                // Если запрос разрешения отклонен, grantResults будет пустым
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    TextVoicer.voiceText(this, {
+                        val intent = Intent(this, RecognitionService::class.java)
+                        bindService(intent, recognitionServiceConnection, BIND_AUTO_CREATE)
+                    }, startPhrase!!)
+
+                } else {
+                    // Разрешение не предоставлено, обрабатываем это соответственно
+                }
+                return
+            }
+            // Добавьте обработку других разрешений, если необходимо
+        }
+        }
+    }
 }
-
-
-//class MainActivity : ComponentActivity() {
-//        override fun onCreate(savedInstanceState: Bundle?) {
-//        super.onCreate(savedInstanceState)
-//        setContent {
-//            var value by remember {
-//                mutableStateOf("------------")
-//            }
-//            Column() {
-//                Text(text = value, color = Red, fontSize = 26.sp)
-//                Button(onClick = {
-//                    CoroutineScope(Dispatchers.Main).launch {
-//                        value = ChatData.getResponse("Привет, какие цвета ты знаешь? Назови 10 штук.")
-//                    } }) {
-//                    Text("getResponse")
-//                }
-//            }
-//
-//        }
-//    }
-//}
-
 
 
 
