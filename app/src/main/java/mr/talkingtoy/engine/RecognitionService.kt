@@ -178,7 +178,7 @@ class RecognitionService : Service() {
                     val recognizedText = it[0]
                     if (FeatureHandler.repeatFeatureIsOn && !executeStop(recognizedText)) {
                         speechRecognizer.stopListening()
-                        if (!isRepeatingPhrase && recognizedText.trim() != "Повторить? Ну давай, внимательно тебя слушаю.") {
+                        if (!isRepeatingPhrase) {
                             isRepeatingPhrase = true
                             TextVoicer.voiceText(context, {
                                 isRepeatingPhrase = false
